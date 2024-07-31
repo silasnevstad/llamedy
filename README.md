@@ -1,0 +1,2 @@
+# llamedy
+A funny LLM

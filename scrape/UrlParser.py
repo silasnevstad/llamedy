@@ -47,17 +47,3 @@ class ComedianParser:
     def get_comedians(self):
         return {comedian: list(urls) for comedian, urls in self.comedians.items()}
 
-# Initialize the parser with a specific log level
-parser = ComedianParser(log_level=logging.INFO)
-
-# Parse the file
-parser.parse_file('scrape/youtube_urls.txt')
-
-# Get the dictionary of comedians
-comedians_dict = parser.get_comedians()
-
-# Use the dictionary as needed
-for name, urls in comedians_dict.items():
-    print(f"{name}:")
-    for url in urls:
-        print(f"  - {url}")

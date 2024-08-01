@@ -7,7 +7,7 @@ class TranscriptionManager:
         self.logger = self._setup_logger(log_level)
         self.url_file_path = url_file_path
         self.parser = ComedianParser(log_level=log_level)
-        self.transcriber = YouTubeTranscriber(vosk_model_path, log_level=log_level)
+        self.transcriber = YouTubeTranscriber(log_level=log_level)
         self.comedians_dict = {}
 
     def _setup_logger(self, log_level):

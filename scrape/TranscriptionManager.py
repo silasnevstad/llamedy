@@ -40,6 +40,13 @@ class TranscriptionManager:
                 elif result == "exists":
                     urls_existing += 1
                     self.logger.info(f"URL already in database (not added): {url}")
+                self.logger.info(f"Transcribing: {url}")
+                transcription = self.transcriber.transcribe_url(url)
+                if transcription:
+                    self.transcription_dict[url] = transcription
+                    print(f"\nTranscription for {name} - {url}:")
+                    print(transcription)
+                    print("\n" + "=" * 50 + "\n")
                 else:
                     urls_error += 1
 
@@ -76,6 +83,18 @@ class TranscriptionManager:
     def get_transcriptions(self):
         return self.transcription_dict
 
+    def chunk_transcriptions(self, chunk_size=1000):
+        if not self.transcription_dict:
+            self.logger.error("No transcriptions found")
+            return
+        chunks = [list(self.transcription_dict.items())[i:i + chunk_size] for i in
+                  range(0, len(self.transcription_dict), chunk_size)]
+        self.logger.info(f"Transcriptions split into {len(chunks)} chunks")
+        return chunks
+
+    def convert_transcriptions_to_input(self):
+        return list(self.transcription_dict.values())
+
     def load_transcriptions_from_file(self, file_path):
         self.logger.info(f"Loading transcriptions from file: {file_path}")
         try:
@@ -104,11 +123,12 @@ class TranscriptionManager:
         self.transcribe_all()
         self.db_manager.close()
 
+
 # Usage
 if __name__ == "__main__":
     log_level = logging.INFO
     url_file_path = 'scrape/youtube_urls.txt'
     db_path = "comedians.db"
-    
+
     manager = TranscriptionManager(log_level, url_file_path, db_path)
     manager.run()

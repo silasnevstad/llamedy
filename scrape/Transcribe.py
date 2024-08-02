@@ -1,7 +1,8 @@
 import logging
+import re
 from pytube import YouTube
 from youtube_transcript_api import YouTubeTranscriptApi
-import pytube.exceptions
+
 
 class YouTubeTranscriber:
     def __init__(self, log_level=logging.INFO):
@@ -33,18 +34,18 @@ class YouTubeTranscriber:
         try:
             yt = YouTube(url)
             self.logger.info(f"YouTube object created for {url}")
-            
+
             video_id = yt.video_id
             self.logger.info(f"Fetching captions for video ID: {video_id}")
-            
+
             transcript = YouTubeTranscriptApi.get_transcript(video_id, languages=['en'])
-            
+
             if not transcript:
                 self.logger.error("No English captions found for this video.")
                 return None
 
             full_text = ' '.join([entry['text'] for entry in transcript])
-            
+
             self.logger.info("Captions fetched successfully.")
             return full_text
         except Exception as e:
@@ -54,6 +55,14 @@ class YouTubeTranscriber:
     def transcribe_url(self, url):
         captions = self.get_captions(url)
         if captions:
-          return captions
+            return self.clean_transcription(captions)
         else:
-          self.logger.ERROR("Failed to transcribe video: {url}")
+            self.logger.error(f"Failed to transcribe: {url}")
+
+    @staticmethod
+    def clean_transcription(transcription):
+        # remove [Music], [Applause], etc from transcription
+        transcription = re.sub(r'\[.*?\]', '', transcription)
+
+        return transcription
+

@@ -62,6 +62,10 @@ class DBManager:
         if url not in self.url_set:
             self.logger.warning(f"URL not found in database: {url}")
             return False
+
+        if not transcription:
+            self.logger.warning(f"Transcription is empty for URL: {url}")
+            return False
         
         self.cursor.execute(
             "UPDATE comedians SET transcription = ? WHERE url = ?",

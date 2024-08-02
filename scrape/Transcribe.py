@@ -54,9 +54,6 @@ class YouTubeTranscriber:
     def transcribe_url(self, url):
         captions = self.get_captions(url)
         if captions:
-            print(f"\nCaptions for {url}:")
-            print(captions)
-            print("\n" + "="*50 + "\n")
+          return captions
         else:
-            print(f"\nFailed to fetch captions for {url}\n")
-        return captions
+          self.logger.ERROR("Failed to transcribe video: {url}")

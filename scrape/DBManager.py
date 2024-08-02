@@ -57,6 +57,7 @@ class DBManager:
         except sqlite3.IntegrityError:
             self.logger.warning(f"Failed to add duplicate URL: {url}")
             return "error"
+          
     def update_transcription(self, url, transcription):
         if url not in self.url_set:
             self.logger.warning(f"URL not found in database: {url}")

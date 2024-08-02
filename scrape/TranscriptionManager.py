@@ -7,11 +7,11 @@ class TranscriptionManager:
     def __init__(self, log_level, url_file_path, db_path):
         self.logger = self._setup_logger(log_level)
         self.url_file_path = url_file_path
-        self.parser = ComedianParser(log_level=log_level)
+        self.parser = ComedianParser(log_level=logging.ERROR)
         self.transcriber = YouTubeTranscriber(log_level=log_level)
-        self.db_manager = DBManager(db_path, log_level=log_level)
+        self.db_manager = DBManager(db_path, log_level=logging.ERROR)
         self.comedians_dict = {}
-        self.transcription_dict = {}
+        self.new_urls = []  # List to store newly added URLs
 
     def _setup_logger(self, log_level):
         logger = logging.getLogger(__name__)
@@ -28,6 +28,7 @@ class TranscriptionManager:
         self.comedians_dict = self.parser.get_comedians()
         self.logger.info(f"Parsed {len(self.comedians_dict)} comedians")
 
+        self.new_urls.clear()  # Clear any previously stored new URLs
         urls_added = 0
         urls_existing = 0
         urls_error = 0
@@ -37,9 +38,9 @@ class TranscriptionManager:
                 result = self.db_manager.add_comedian(name, url)
                 if result == "added":
                     urls_added += 1
+                    self.new_urls.append((name, url))  # Store newly added URLs
                 elif result == "exists":
                     urls_existing += 1
-                    self.logger.info(f"URL already in database (not added): {url}")
                 else:
                     urls_error += 1
 
@@ -49,13 +50,11 @@ class TranscriptionManager:
         self.logger.info(f"  - Failed due to error: {urls_error}")
 
     def transcribe_all(self):
-        self.logger.info("Starting transcription for untranscribed videos")
-        untranscribed = self.db_manager.get_untranscribed_urls()
-        total_untranscribed = len(untranscribed)
+        self.logger.info(f"Starting transcription for {len(self.new_urls)} newly added videos")
         successful_transcriptions = 0
         failed_transcriptions = 0
 
-        for name, url in untranscribed:
+        for name, url in self.new_urls:
             self.logger.info(f"Transcribing: {url}")
             transcription = self.transcriber.transcribe_url(url)
             if transcription:
@@ -66,38 +65,13 @@ class TranscriptionManager:
                 print("\n" + "="*50 + "\n")
             else:
                 failed_transcriptions += 1
-                print(f"\nTranscription failed for {name} - {url}\n")
+                self.logger.warning(f"Transcription failed for {name} - {url}")
 
         self.logger.info("Transcription process complete:")
-        self.logger.info(f"  - Total untranscribed videos: {total_untranscribed}")
         self.logger.info(f"  - Successfully transcribed: {successful_transcriptions}")
         self.logger.info(f"  - Failed transcriptions: {failed_transcriptions}")
 
-    def get_transcriptions(self):
-        return self.transcription_dict
-
-    def load_transcriptions_from_file(self, file_path):
-        self.logger.info(f"Loading transcriptions from file: {file_path}")
-        try:
-            with open(file_path, 'r') as file:
-                for line in file:
-                    url, transcription = line.split(' - ')
-                    self.transcription_dict[url] = transcription
-            self.logger.info(f"Loaded {len(self.transcription_dict)} transcriptions")
-        except FileNotFoundError:
-            self.logger.error(f"File not found: {file_path}")
-        except Exception as e:
-            self.logger.error(f"Error loading transcriptions: {str(e)}")
-
-    def save_transcriptions_to_file(self, file_path):
-        self.logger.info(f"Saving transcriptions to file: {file_path}")
-        try:
-            with open('scrape/' + file_path, 'w') as file:
-                for url, transcription in self.transcription_dict.items():
-                    file.write(f"{url} - {transcription}\n")
-            self.logger.info(f"Saved {len(self.transcription_dict)} transcriptions")
-        except Exception as e:
-            self.logger.error(f"Error saving transcriptions: {str(e)}")
+        self.new_urls.clear()  # Clear the new_urls list after processing
 
     def run(self):
         self.parse_urls()

@@ -1,3 +1,10 @@
+models/vosk
+
+scrape/transcriptions.txt
+
+# IntelliJ
+.idea/
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]

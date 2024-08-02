@@ -1,13 +1,15 @@
 import logging
 from UrlParser import ComedianParser
 from Transcribe import YouTubeTranscriber
+from DBManager import DBManager
 
 class TranscriptionManager:
-    def __init__(self, log_level, url_file_path, vosk_model_path):
+    def __init__(self, log_level, url_file_path, db_path):
         self.logger = self._setup_logger(log_level)
         self.url_file_path = url_file_path
         self.parser = ComedianParser(log_level=log_level)
         self.transcriber = YouTubeTranscriber(log_level=log_level)
+        self.db_manager = DBManager(db_path, log_level=log_level)
         self.comedians_dict = {}
 
     def _setup_logger(self, log_level):
@@ -25,30 +27,61 @@ class TranscriptionManager:
         self.comedians_dict = self.parser.get_comedians()
         self.logger.info(f"Parsed {len(self.comedians_dict)} comedians")
 
-    def transcribe_all(self):
-        self.logger.info("Starting transcription for all comedians")
+        urls_added = 0
+        urls_existing = 0
+        urls_error = 0
+
         for name, urls in self.comedians_dict.items():
-            self.logger.info(f"Transcribing videos for {name}")
             for url in urls:
-                self.logger.info(f"Transcribing: {url}")
-                transcription = self.transcriber.transcribe_url(url)
-                if transcription:
-                    print(f"\nTranscription for {name} - {url}:")
-                    print(transcription)
-                    print("\n" + "="*50 + "\n")
+                result = self.db_manager.add_comedian(name, url)
+                if result == "added":
+                    urls_added += 1
+                elif result == "exists":
+                    urls_existing += 1
+                    self.logger.info(f"URL already in database (not added): {url}")
                 else:
-                    print(f"\nTranscription failed for {name} - {url}\n")
-        self.logger.info("Transcription complete for all comedians")
+                    urls_error += 1
+
+        self.logger.info(f"URL processing complete:")
+        self.logger.info(f"  - Added: {urls_added}")
+        self.logger.info(f"  - Already existed: {urls_existing}")
+        self.logger.info(f"  - Failed due to error: {urls_error}")
+
+    def transcribe_all(self):
+        self.logger.info("Starting transcription for untranscribed videos")
+        untranscribed = self.db_manager.get_untranscribed_urls()
+        total_untranscribed = len(untranscribed)
+        successful_transcriptions = 0
+        failed_transcriptions = 0
+
+        for name, url in untranscribed:
+            self.logger.info(f"Transcribing: {url}")
+            transcription = self.transcriber.transcribe_url(url)
+            if transcription:
+                self.db_manager.update_transcription(url, transcription)
+                successful_transcriptions += 1
+                print(f"\nTranscription for {name} - {url}:")
+                print(transcription)
+                print("\n" + "="*50 + "\n")
+            else:
+                failed_transcriptions += 1
+                print(f"\nTranscription failed for {name} - {url}\n")
+
+        self.logger.info("Transcription process complete:")
+        self.logger.info(f"  - Total untranscribed videos: {total_untranscribed}")
+        self.logger.info(f"  - Successfully transcribed: {successful_transcriptions}")
+        self.logger.info(f"  - Failed transcriptions: {failed_transcriptions}")
 
     def run(self):
         self.parse_urls()
         self.transcribe_all()
+        self.db_manager.close()
 
 # Usage
 if __name__ == "__main__":
     log_level = logging.INFO
     url_file_path = 'scrape/youtube_urls.txt'
-    vosk_model_path = "models/vosk/vosk-model-en-us-0.42-gigaspeech"  # Replace with your VOSK model path
+    db_path = "comedians.db"
     
-    manager = TranscriptionManager(log_level, url_file_path, vosk_model_path)
+    manager = TranscriptionManager(log_level, url_file_path, db_path)
     manager.run()

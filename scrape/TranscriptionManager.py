@@ -11,6 +11,7 @@ class TranscriptionManager:
         self.transcriber = YouTubeTranscriber(log_level=log_level)
         self.db_manager = DBManager(db_path, log_level=log_level)
         self.comedians_dict = {}
+        self.transcription_dict = {}
 
     def _setup_logger(self, log_level):
         logger = logging.getLogger(__name__)
@@ -71,6 +72,32 @@ class TranscriptionManager:
         self.logger.info(f"  - Total untranscribed videos: {total_untranscribed}")
         self.logger.info(f"  - Successfully transcribed: {successful_transcriptions}")
         self.logger.info(f"  - Failed transcriptions: {failed_transcriptions}")
+
+    def get_transcriptions(self):
+        return self.transcription_dict
+
+    def load_transcriptions_from_file(self, file_path):
+        self.logger.info(f"Loading transcriptions from file: {file_path}")
+        try:
+            with open(file_path, 'r') as file:
+                for line in file:
+                    url, transcription = line.split(' - ')
+                    self.transcription_dict[url] = transcription
+            self.logger.info(f"Loaded {len(self.transcription_dict)} transcriptions")
+        except FileNotFoundError:
+            self.logger.error(f"File not found: {file_path}")
+        except Exception as e:
+            self.logger.error(f"Error loading transcriptions: {str(e)}")
+
+    def save_transcriptions_to_file(self, file_path):
+        self.logger.info(f"Saving transcriptions to file: {file_path}")
+        try:
+            with open('scrape/' + file_path, 'w') as file:
+                for url, transcription in self.transcription_dict.items():
+                    file.write(f"{url} - {transcription}\n")
+            self.logger.info(f"Saved {len(self.transcription_dict)} transcriptions")
+        except Exception as e:
+            self.logger.error(f"Error saving transcriptions: {str(e)}")
 
     def run(self):
         self.parse_urls()

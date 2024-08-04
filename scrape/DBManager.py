@@ -39,6 +39,32 @@ class DBManager:
         self.cursor.execute("SELECT url FROM comedians")
         self.url_set = set(row[0] for row in self.cursor.fetchall())
         self.logger.info(f"Loaded {len(self.url_set)} URLs")
+       
+    def get_all_transcripts(self, tokenizer, max_tokens):
+      self.logger.info(f"Retrieving all transcripts, trimmed to {max_tokens} tokens")
+      self.cursor.execute("SELECT name, transcription FROM comedians WHERE transcription IS NOT NULL")
+      results = self.cursor.fetchall()
+      
+      trimmed_transcripts = []
+      for name, transcription in results:
+          if transcription:
+              # Tokenize the transcription
+              tokens = tokenizer.encode(transcription, add_special_tokens=False)
+              
+              # Trim to max_tokens
+              if len(tokens) > max_tokens:
+                  tokens = tokens[:max_tokens]
+                  trimmed_text = tokenizer.decode(tokens)
+              else:
+                  trimmed_text = transcription
+              
+              trimmed_transcripts.append({
+                  "name": name,
+                  "text": trimmed_text
+              })
+      
+      self.logger.info(f"Retrieved {len(trimmed_transcripts)} transcripts")
+      return trimmed_transcripts 
 
     def add_comedian(self, name, url):
         if url in self.url_set:

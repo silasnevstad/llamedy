@@ -55,6 +55,7 @@ class DBManager:
               if len(tokens) > max_tokens:
                   tokens = tokens[:max_tokens]
                   trimmed_text = tokenizer.decode(tokens)
+                  self.logger.warning(f"Trimmed transcript for {name} to {max_tokens} tokens")
               else:
                   trimmed_text = transcription
               
